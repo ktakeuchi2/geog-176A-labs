@@ -1,0 +1,146 @@
+
+
+```{r}
+covid %>% 
+  filter(state == state.of.interest) %>% 
+  group_by(date) %>% 
+  mutate(newCases = cases - lag(cases)) %>% 
+  ungroup() %>%   
+  kable(cases = sum(cases, na.rm = FALSE), caption = "Most Cumulative Cases") %>% 
+  
+  kable(newCases, caption = "Most New Cases")
+  knitr::kable(cases = sum(cases, na.rm = FALSE), caption = "Most Cumulative Cases", head(5))
+  knitr::kable(newCases, caption = "Most New Cases", head(5))
+  
+  
+```
+
+```{r}
+dat0 = covid %>% 
+  filter(state == "California") %>% 
+  group_by(county) %>% 
+  summarize(sum_cases = sum(cases)) %>% 
+  ungroup() %>% 
+  filter(date == max(date)) %>% 
+  slice_max(sum_cases, n = 5) %>% 
+  select(county, sum_cases) %>% 
+  knitr::kable(sum_cases,
+               caption = "Most Cumulative Cases",
+               col.names = c("County", "Cases")) %>% 
+    kableExtra::kable_styling("striped", full_width = TRUE, font_size = 14)
+``` 
+
+
+#### Question 2
+
+install.packages("zoo")
+library(zoo)
+
+covid %>% 
+group_by(state) %>% 
+filter(state == "New York", "California", "Louisiana", "Florida") %>% 
+group_by(date) %>% 
+summarize(cases = sum(cases)) %>% 
+mutate(newCases = cases - lag(cases),
+  roll7 = rollmean(newCases, 7, fill = NA, align = "right")) %>% 
+  ggplot(aes (x = date)) +
+  geom_col(aes(y = newCases), col = state, fill = state)) +
+  geom_line(aes(y = roll7, col = state, size = 1)) +
+  facet_wrap(date~state, scales = "free_y") +
+  labs(title = "Daily New Cases and 7-Day Rolling Mean for New York, California, Louisiana, and Florida",
+  x = "Date",
+  y = "Cases",
+  subtitle = ")
+  
+  
+
+
+
+homes = read_csv("data/landdata-states.csv")
+
+library(readxl)
+pop <- read_excel("data/PopulationEstimates.xls", skip = 2) %>% 
+  select(pop19 = POP_ESTIMATE_2019, state = State, county = Area_Name) %>% 
+  group_by(state) %>% 
+  slice_max(pop19, n=1)
+  
+
+summary(pop)
+dim(pop)
+names(pop)
+head(pop)
+
+
+homes %>% 
+  filter(State %in% c("CA", "TX")) %>% 
+  ggplot(aes(x = Year, y = Home.Value)) +
+  geom_line(aes(color = State)) +
+  labs(title = "Title") +
+  ggthemes::theme_excel()
+  
+homes$Date
+
+
+
+
+```{r}
+library(readxl)
+PopulationEstimates <- read_excel("../data/PopulationEstimates.xls", 
+    skip = 2) 
+  
+pop = PopulationEstimates %>% 
+  select(fips = FIPStxt, pop19 = POP_ESTIMATE_2019, state = State, county = Area_Name) %>% 
+  group_by(state) %>% 
+  slice_max(pop19, n=1) %>% 
+  right_join(dat, pop, by = "fips") %>%  
+  group_by(county) %>% 
+  mutate(new_cases_per_cap = sum(most_new_cases)/pop19) %>% 
+  ungroup()
+```
+
+```{r, message=FALSE, warning=FALSE}
+most_cases_per_cap = pop %>% 
+  group_by(county) %>% 
+  summarize(cases_per_cap = sum(cases)/pop19) %>% 
+  slice_max(cases_per_cap, n = 5) %>% 
+  select(county, cases_per_cap)
+
+knitr::kable(most_cases_per_cap,
+             caption = "Most Cumulative Cases Per Capita",
+             col.names = c("County", "Cases Per Capita")) %>% 
+  kableExtra::kable_styling("striped", full_width = TRUE)
+```
+
+```{r}
+most_new_cases_per_cap = pop %>% 
+  slice_max(new_cases_per_cap, n = 5) %>% 
+  select(county, new_cases_per_cap)
+
+knitr::kable(most_new_cases_per_cap,
+             caption = "Most New Cases Per Capita",
+             col.names = c("County", "New Cases Per Capita")) %>% 
+  kableExtra::kable_styling("striped", full_width = TRUE)
+```
+
+```{r}
+pop %>% 
+  filter(date == max(date)-13) %>% 
+  group_by(county, pop19) %>% 
+  summarize(tot_cases = sum(cases) / 100000) %>% 
+  mutate(newCases = cases - lag(cases)) %>% 
+  summarize(new_Cases = sum(newCases) / 100000) %>% 
+  ungroup() %>% 
+  count(new_Cases)
+```
+
+The total number of cases is , the total number of new cases is , and the total number of safe counties, where there are less than 100 new cases per 100,000 residents over the past 14 days is .
+*****
+
+#### Question 2: COVID Cases in New York, California, Louisiana, and Florida
+
+```{r}
+library(zoo)
+
+```
+
+

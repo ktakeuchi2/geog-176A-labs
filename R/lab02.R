@@ -45,41 +45,56 @@ PopulationEstimates <- read_excel("data/PopulationEstimates.xls",
                                   skip = 2)
 pop = PopulationEstimates %>%
   select(fips = FIPStxt, pop19 = POP_ESTIMATE_2019, state = State, county = Area_Name) %>%
-  group_by(state) %>%
+  filter(state == "CA") %>%
+  group_by(county) %>%
   slice_max(pop19, n=1) %>%
-  right_join(dat, pop, by = "FIPStxt") %>%
-  group_by(county) %>%
-  mutate(new_cases_per_cap = sum(most_new_cases)/pop19) %>%
-  ungroup()
+  right_join(dat, pop, by = "fips") %>%
+  mutate(cases_pcap = (cases/pop19) * 100000, newcases_pcap = (cases/pop19) * 100000) %>%
+  ungroup() %>%
+  filter(date == max(date))
 
-most_cases_per_cap = pop %>%
-  group_by(county) %>%
-  summarize(cases_per_cap = sum(cases)/pop19) %>%
-  slice_max(cases_per_cap, n = 5) %>%
-  select(county, cases_per_cap)
+cases_pcapita = pop %>%
+  slice_max(cases_pcap, n = 5) %>%
+  select(county.y, cases_pcap)
 
-knitr::kable(most_cases_per_cap,
+knitr::kable(cases_pcapita,
              caption = "Most Cumulative Cases Per Capita",
              col.names = c("County", "Cases Per Capita")) %>%
   kableExtra::kable_styling("striped", full_width = TRUE)
 
-most_new_cases_per_cap = pop %>%
-  slice_max(new_cases_per_cap, n = 5) %>%
-  select(county, new_cases_per_cap)
+newcases_pcapita = pop %>%
+  slice_max(newcases_pcap, n = 5) %>%
+  select(county.y, newcases_pcap)
 
-knitr::kable(most_new_cases_per_cap,
+knitr::kable(newcases_pcapita,
              caption = "Most New Cases Per Capita",
              col.names = c("County", "New Cases Per Capita")) %>%
   kableExtra::kable_styling("striped", full_width = TRUE)
 
-pop %>%
-  filter(date == max(date)-13) %>%
+# covid data to last 14 days
+# total number of cases per county
+# total number of new cases per county
+# number of safe counties (less than 100 new cases in past 14 days per 100,000 residents)
+# filter(date == max(date) - 13) %>%
+
+last_14 = pop %>%
+  filter(date == max(date) - 13) %>%
+  select(county = county.y, newCases, pop19, date) %>%
   group_by(county, pop19) %>%
-  summarize(tot_cases = sum(cases) / 100000) %>%
-  mutate(newCases = cases - lag(cases)) %>%
-  summarize(new_Cases = sum(newCases) / 100000) %>%
+  summarize(tot_cases = sum(newCases)) %>%
   ungroup() %>%
-  count(new_Cases)
+  mutate(newcasespcap = (tot_cases)/(pop19/100000))
+
+tot_state_cases = pop %>%
+  summarise(tot)
+
+safe_county = last_14 %>%
+  filter(newcasespcap < 100) %>%
+  pull(county)
+
+
+
+  summarize(safe = tot_casespcap < 100 == TRUE)
 
 # The total number of cases is ,
 # the total number of new cases is ,
@@ -91,22 +106,24 @@ pop %>%
 library(zoo)
 
 covid %>%
-  group_by(state) %>%
-  filter(state == "NY", "CA", "LA", "FL") %>%
-  group_by(date) %>%
+  filter(state == "New York"| state == "California"| state == "Louisiana" | state =="Florida") %>%
+  group_by(state, date) %>%
   summarize(cases = sum(cases)) %>%
+  ungroup(state, date) %>%
+  group_by(state) %>%
   mutate(newCases = cases - lag(cases),
          roll7 = rollmean(newCases, 7, fill = NA, align = "right")) %>%
   ggplot(aes (x = date)) +
-  geom_col(aes(y = newCases), col = state, fill = state) +
-  geom_line(aes(y = roll7, col = state, size = 1)) +
-  facet_wrap(date~state, scales = "free_y") +
-  labs(title = "Daily New Cases and 7-Day Rolling Mean for New York, California, Louisiana, and Florida",
+  geom_col(aes(y = newCases), color = NA, fill = "lightblue3") +
+  geom_line(aes(y = roll7, color = "blue", size = 0.5)) +
+  labs(title = "Daily New Cases and 7-Day Rolling Mean",
        x = "Date",
        y = "Cases",
        subtitle = "Data Source: NY Times",
        caption = "Lab 02 Question 02") +
-  theme_linedraw()
+  facet_wrap(~state, scales = "free_y") +
+  theme_linedraw() +
+  ggsave(file = "img/lab02question02.png")
 
 
 
