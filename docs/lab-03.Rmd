@@ -269,6 +269,9 @@ ggplot() +
                             stat = "sf_coordinates",
                             size = 3)
 ```
+
+*****
+
 Constitutional rights protected by the Fourth Constitutional Amendment no longer apply fully at borders. The border zone of 100 miles (~160 km) from external boundaries contains 28,145 cities. 259 million people live in these border zones. Compared to the 397 million people living in the US, 65 % of the US population, or about two thirds, is living in these border zones. This is accurate to the ACLU article estimate.
 
 
