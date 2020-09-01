@@ -221,13 +221,91 @@ ggplot() +
 # 3.2
 ggplot() +
   geom_sf(data = conus) +
-  geom_sf(data = cities) +
-  geom_sf(data = farthest_us_border) +
-  labs(title = "Distance of US Cities from US Border")
+  geom_sf(data = cities, aes(col = dist_border), size = 0.1) +
+  geom_sf(data = farthest_us_border, col = "red", size = 1) +
+  geom_sf(data = conus_u, col = "black") +
+  scale_color_gradient(low = "grey", high = "darkblue") +
+  labs(title = "Distance of US Cities from US Border",
+       dist_border = "Distance to US Border") +
+  ggthemes::theme_map() +
+  ggrepel::geom_label_repel(data = farthest_us_border,
+                            aes(label = city, geometry = geometry),
+                            stat = "sf_coordinates",
+                            size = 4)
 
 # 3.3
-
+ggplot() +
+  geom_sf(data = conus) +
+  geom_sf(data = cities, aes(col = dist_state), size = 0.2) +
+  geom_sf(data = farthest_state, col = "navyblue", size = 1) +
+  scale_color_gradient(low = "lightcoral", high = "red4") +
+  labs(title = "Distance of US Cities from US Border",
+       dist_border = "Distance to US Border") +
+  ggthemes::theme_map() +
+  ggrepel::geom_label_repel(data = farthest_state,
+                            aes(label = city, geometry = geometry),
+                            stat = "sf_coordinates",
+                            size = 4)
 
 # 3.4
 
+eqdistance = cities %>%
+  mutate(ab_distance = abs(dist_mexico - dist_canada)) %>%
+  filter(ab_distance <= 100)
+
+eqdistance_5 = eqdistance %>%
+  slice_max(population, n = 5)
+
+ggplot() +
+  geom_sf(data = conus) +
+  geom_sf(data = eqdistance, aes(col = ab_distance), size = 0.2) +
+  geom_sf(data = eqdistance_5, col = "red", size = 2) +
+  labs(title = "US Cities Equidistant From Mexican and Canadian Borders") +
+  ggthemes::theme_map() +
+  ggrepel::geom_label_repel(data = eqdistance_5,
+                            aes(label = city, geometry = geometry),
+                            stat = "sf_coordinates",
+                            size = 3)
+
 # Question 4
+
+# 4.1
+
+zone = cities %>%
+  filter(dist_border <= 160) %>%
+  mutate(sum_pop = sum(population))
+
+zone_10 = zone %>%
+  group_by(state_name) %>%
+  slice_max(population, n = 1)
+
+cities %>%
+  summarise(tot_pop = sum(population))
+
+259 / 397 * 100
+
+ggplot() +
+  geom_sf(data = conus) +
+  geom_sf(data = zone) +
+  scale_color_gradient(low = "orange", high = "darkred") +
+  geom_sf(data = zone_10, col = "navyblue", size = 4) +
+  labs(title = "Border Zone",
+       subtitle = "100 Mile Zone / Danger Zone") +
+  ggthemes::theme_map() +
+  ggrepel::geom_label_repel(data = zone_10,
+                            aes(label = city, geometry = geometry),
+                            stat = "sf_coordinates",
+                            size = 3)
+
+
+# 4.2
+mutate(sum_pop = sum(population)) %>%
+  head(5)
+
+cities %>%
+  mutate(tot_pop = sum(population))
+
+
+
+
+

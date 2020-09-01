@@ -208,7 +208,7 @@ ggplot() +
   geom_sf(data = cities, aes(col = dist_state), size = 0.2) +
   geom_sf(data = farthest_state, col = "navyblue", size = 1) +
   scale_color_gradient(low = "lightcoral", high = "red4") +
-  labs(title = "Distance of US Cities from US Border",
+  labs(title = "Distance of US Cities from State Border",
        dist_border = "Distance to US Border") +
   ggthemes::theme_map() +
   ggrepel::geom_label_repel(data = farthest_state,
@@ -259,8 +259,8 @@ cities %>%
 ggplot() +
   geom_sf(data = conus) +
   geom_sf(data = zone) +
-  scale_color_gradient(low = "orange", high = "darkred") +
   geom_sf(data = zone_10, col = "navyblue", size = 1) +
+  scale_color_gradient(low = "orange", high = "darkred") +
   labs(title = "Border Zone",
        subtitle = "100 Mile Zone / Danger Zone") +
   ggthemes::theme_map() +
@@ -274,4 +274,4 @@ ggplot() +
 
 Constitutional rights protected by the Fourth Constitutional Amendment no longer apply fully at borders. The border zone of 100 miles (~160 km) from external boundaries contains 28,145 cities. 259 million people live in these border zones. Compared to the 397 million people living in the US, 65 % of the US population, or about two thirds, is living in these border zones. This is accurate to the ACLU article estimate.
 
-
+*****
