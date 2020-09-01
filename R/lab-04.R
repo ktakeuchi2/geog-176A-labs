@@ -1,7 +1,7 @@
 # ---
 # title: "Geography 176A"
 # author: "Kiki Takeuchi"
-# subtitle: "Lab 03: Distances and the Border Zone"
+# subtitle: "Lab 04: Tesselations, Point in Polygon"
 # output:
 #  html_document:
 #  theme: journal
