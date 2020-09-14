@@ -134,27 +134,59 @@ library(stats)
 k12 = kmeans(vs, centers = 12)
 kmeans_raster = flood$ndvi
 values(kmeans_raster) = k12$cluster
+plot(kmeans_raster)
 
 k11 = kmeans(vs, centers = 11)
 kmeans_raster = flood$ndvi
 values(kmeans_raster) = k11$cluster
+plot(kmeans_raster)
 
 k10 = kmeans(vs, centers = 10)
 kmeans_raster = flood$ndvi
 values(kmeans_raster) = k10$cluster
+plot(kmeans_raster)
 
 k13 = kmeans(vs, centers = 13)
 kmeans_raster = flood$ndvi
 values(kmeans_raster) = k13$cluster
+plot(kmeans_raster)
 
-p12 <- fviz_cluster(k12, geom = "point",  data = vs) + ggtitle("k = 12")
-p11 <- fviz_cluster(k11, geom = "point",  data = vs) + ggtitle("k = 11")
-p10 <- fviz_cluster(k10, geom = "point",  data = vs) + ggtitle("k = 10")
-p13 <- fviz_cluster(k13, geom = "point",  data = vs) + ggtitle("k = 13")
+k9 = kmeans(vs, centers = 9)
+kmeans_raster = flood$ndvi
+values(kmeans_raster) = k9$cluster
+plot(kmeans_raster)
 
-library(patchwork)
-p12+p11+p10+p13
+flood_values = getValues(flood_ndvi)
+kmeans_values = getValues(kmeans_raster)
+table = table(flood_values, kmeans_values)
+which.max(table)
+
+mask = function(x){ifelse(x == 5, 1, NA)}
+flood_mask = calc(kmeans_raster, mask)
+
+flood = addLayer(flood, flood_mask)
+
+### Question 6
+
+s1 = cellStats(flood$ndvi, stat = 'sum') * 30^2
+s2 = cellStats(flood$ndwi, stat = 'sum') * 30^2
+s3 = cellStats(flood$mndwi, stat = 'sum') * 30^2
+s4 = cellStats(flood$swi, stat = 'sum') * 30^2
+s5 = cellStats(flood$wri, stat = 'sum') * 30^2
+s6 = cellStats(flood_mask, stat = 'sum') * 30^2
+comparison = cbind(method = c("ndvi", "ndwi", "mndwi", "wri", "swi", "kmeans_mask"), cell_area = c(s1, s2, s3, s4, s5, s6))
 
 
+knitr::kable(comparison,
+             caption = "Total Area of Flooded Cells",
+             col.names = c("Band", "Total Flooded Cells")) %>%
+  kableExtra::kable_styling("striped", full_width = TRUE)
 
+total_flood = calc(flood, sum)
+plot(total_flood, col = RColorBrewer::brewer.pal(9, "Blues"))
+
+total_flood <- na.omit(total_flood)
+flood = addLayer(flood, total_flood)
+
+mapview(total_flood)
 

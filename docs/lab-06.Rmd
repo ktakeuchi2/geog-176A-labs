@@ -1,0 +1,125 @@
+---
+title: "Geography 176 A"
+author: "[Kiki Takeuchi](https://github.com/ktakeuchi2)"
+subtitle: 'Lab 06: Flood Risk in Mission Creek: Past, Present, Future'
+output: 
+  html_document:
+    theme: journal
+---
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+library(tidyverse)
+library(sf)
+library(raster)
+library(fasterize)
+library(whitebox)
+library(knitr)
+library(osmdata)
+library(elevatr)
+```
+### Collecting Data
+
+Our basin data comes from the [Network Linked Data Index(NLDI)](https://waterdata.usgs.gov/blog/nldi-intro/) as well as Open Street Map. We built multiple rasters of the basin boundary, elevation, streams, and the railway station, all clipped to the boundary of the Mission Creek Basin we are interested in.
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+url = 'https://labs.waterdata.usgs.gov/api/nldi/linked-data/nwissite/USGS-11119750/basin'
+basin = read_sf(url)
+elev = get_elev_raster(basin, z = 13) %>%
+  crop(basin) %>%
+  mask(basin)
+elev = elev * 3.281
+writeRaster(elev, "../data/mission-creek-elev.tif", overwrite = TRUE)
+elev = raster("../data/mission-creek-elev.tif")
+```
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+bb = st_bbox(basin) %>%
+  st_as_sfc() %>%
+  st_transform(4326)
+
+bldg = opq(bb) %>%
+  add_osm_feature(key = 'building') %>%
+  osmdata_sf()
+bldg_cent = bldg$osm_polygons %>%
+  st_centroid() %>%  
+  st_transform(crs(basin)) %>% 
+  st_intersection(basin)
+
+rail = opq(bb) %>%
+  add_osm_feature(key = 'railway', value = "station") %>% 
+  osmdata_sf()
+railway = rail$osm_points %>% 
+  st_transform(crs(basin)) %>% 
+  st_intersection(basin)
+ 
+water = opq(bb) %>%
+  add_osm_feature(key = 'waterway', value = "stream") %>%
+  osmdata_sf()
+stream = water$osm_lines %>%
+  st_transform(crs(basin)) %>% 
+  st_intersection(basin)
+```
+
+### Terrain Analysis
+
+To analyze the terrain of the Mission Creek Basin, we created two new rasters, one of the "Hillshade", and one of "Height Above Nearest Drainage" (HAND). Using these, we are able to address the issues of flooding in this area.
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+wbt_hillshade("../data/mission-creek-elev.tif", "../data/mission-creek-hillshade.tif")
+hillshade = raster("../data/mission-creek-hillshade.tif")
+plot(hillshade, box = FALSE, axes = FALSE, col = gray.colors(256, alpha = .5), legend = FALSE, main = "Mission Creek Basin")
+plot(basin, add = TRUE)
+plot(stream, col = "blue", add = TRUE)
+```
+This plot shows the Hillshade layer, the basin boundary, and the stream system in this basin.
+
+To create our HAND, we create a raster of the region containing the streams in this basin, correct our elevation raster by breaching all of the depressions, then use these rasters to create a new raster of the elevation above the stream. This HAND is then corrected to the local reference datum using USGS water flow and corresponding height records.  
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+buffer = stream %>%
+  st_transform(5070) %>%
+  st_buffer(10) %>%
+  st_transform(4326) %>%
+  fasterize(elev) %>%
+  writeRaster("../data/mission-creek-stream.tif", overwrite = TRUE)
+
+wbt_breach_depressions("../data/mission-creek-elev.tif", "../data/mission-creek-cond-elev.tif")
+wbt_elevation_above_stream("../data/mission-creek-cond-elev.tif", "../data/mission-creek-stream.tif", "../data/mission-creek-hand.tif")
+
+hand = raster("../data/mission-creek-hand.tif")
+river_networks = raster("../data/mission-creek-stream.tif")
+offset_hand = hand + 3.69
+offset_hand[river_networks == 1] = 0
+writeRaster(offset_hand, "../data/mission-creek-offset-hand.tif", overwrite = TRUE)
+```
+
+### 2017 Impact Analysis
+
+This is a map showing the 2017 flooding event of Mission Creek, where the highest flooding heights were recorded at 10.02 feet, shown on the outskirts of the stream system. The railway station is also marked where the stream drains near Stearns Wharf.
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+offset_hand = raster("../data/mission-creek-offset-hand.tif")
+offset_hand[offset_hand > 10.02] = NA
+
+plot(hillshade, box = FALSE, axes = FALSE, col = gray.colors(256, alpha = .5), legend = FALSE)
+plot(basin, add = TRUE)
+plot(offset_hand, col = rev(blues9), add = TRUE)
+plot(railway, col = "green", cex = 1, pch = 16, add = TRUE)
+```
+
+We then extract the flood depths at each of the buildings located in the area to identify how many buildings have been impacted by the flooding incident. Impacted buildings are colored red on this map, while non-impacted buildings remain black.
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+buildings = ifelse(!is.na(raster::extract(offset_hand, bldg_cent)), "red", "black")
+
+plot(hillshade, box = FALSE, axes = FALSE, col = gray.colors(256, alpha = .5), main = paste(sum(buildings == "red"), "Buildings Impacted by the 2017 Mission Creek Flooding"), legend = FALSE)
+plot(basin, add = TRUE)
+plot(offset_hand, col = rev(blues9), add = TRUE)
+plot(bldg_cent, col = buildings, pch = 16, cex = .08, add = TRUE)
+plot(railway, col = "green", cex = 1, pch = 16, add = TRUE)
+```
+
+### Flood Inundation Map Library
+
+Using the data collected, we create a FIM Library for the Mission Creek Basin indicating water levels, as well as impacted buildings focusing on the portion of the basin contained within Santa Barbara. 
+
+```{r, message=FALSE, warning=FALSE, eval = FALSE, echo=FALSE}
+
+```
