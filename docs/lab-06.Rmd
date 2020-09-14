@@ -63,6 +63,8 @@ stream = water$osm_lines %>%
 
 To analyze the terrain of the Mission Creek Basin, we created two new rasters, one of the "Hillshade", and one of "Height Above Nearest Drainage" (HAND). Using these, we are able to address the issues of flooding in this area.
 
+This plot shows the Hillshade layer, the basin boundary, and the stream system in this basin.
+
 ```{r, message=FALSE, warning=FALSE, echo=FALSE}
 wbt_hillshade("../data/mission-creek-elev.tif", "../data/mission-creek-hillshade.tif")
 hillshade = raster("../data/mission-creek-hillshade.tif")
@@ -70,7 +72,7 @@ plot(hillshade, box = FALSE, axes = FALSE, col = gray.colors(256, alpha = .5), l
 plot(basin, add = TRUE)
 plot(stream, col = "blue", add = TRUE)
 ```
-This plot shows the Hillshade layer, the basin boundary, and the stream system in this basin.
+
 
 To create our HAND, we create a raster of the region containing the streams in this basin, correct our elevation raster by breaching all of the depressions, then use these rasters to create a new raster of the elevation above the stream. This HAND is then corrected to the local reference datum using USGS water flow and corresponding height records.  
 
