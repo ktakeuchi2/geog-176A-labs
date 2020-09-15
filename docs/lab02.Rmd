@@ -157,28 +157,6 @@ ggplot(data = four_states, aes(x = date)) +
 state_dat = covid %>% 
   filter(state %in% c("New York", "California", "Louisiana", "Florida")) %>% 
     right_join(pop, by = "fips")
-  
-state_pop = pop %>% 
-  filter(state %in% c("NY", "CA", "LA", "FL")) %>% 
-  group_by(state.y) %>% 
-  slice_max(pop19, n = 1) %>% 
-  right_join(state_dat, by = "fips")
-  group_by(state.y, date) %>% 
-  summarise(cases = sum(cases)) %>% 
-  ungroup() %>% 
-  group_by(state) %>% 
-  mutate(newCases = cases - lag(cases)) %>% 
-  filter(newCases > 0)
-
-
-
-  
-state_data <- inner_join(state_dat, state_pop, by = "state") %>% 
-  group_by(state) %>% 
-  mutate(cpc = sum(newCases)/(pop19)) %>% 
-  mutate(roll7 = rollmean(newCases, 7, fill = NA, align = "right")) %>%
-  ungroup() %>% 
-  filter(newCases > 0)
 ```
 
 
