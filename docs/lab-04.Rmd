@@ -183,7 +183,7 @@ hex_pip = pip(dams, hex_grid, "id") %>%
 ### Question 4
 ##### Analyzing Distribution and Function of US Dams
 
-```{r, message = FALSE, warning = FALSE}
+```{r, message = FALSE, warning = FALSE, echo = FALSE}
 unique(dams$PURPOSES) %>%
   length
 

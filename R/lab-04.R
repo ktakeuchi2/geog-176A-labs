@@ -158,20 +158,25 @@ hex_pip = pip(dams, hex_grid, "id")
 plot_pip = function(data, title){
   ggplot() +
     geom_sf(data = data, aes(fill = log(n)), col = NA, alpha = 0.9, size = 0.2) +
-    scale_fill_continuous("viridis") +
+    scale_fill_viridis_c() +
     theme_void() +
     labs(title = title,
          caption = paste(sum(n), "Dams")) +
     theme(legend.position = "bottom",
-          plot.title = element_text(hjust = 0.5, color = "navy", face = "bold"))
-}
+          plot.title = element_text(hjust = 0.5, color = "navy", face = "bold"))}
 
 # 3.5
-plot_pip(counties_pip, "Dams Over Counties")
-plot_pip(v_pip, "Dams Over Viroinoi Tesselation")
-plot_pip(t_pip, "Dams Over Triangulated Tesselation")
-plot_pip(sq_pip, "Dams Over Square Coverage")
-plot_pip(hex_pip, "Dams Over Hexagonal Coverage")
+counties_pip = pip(dams, counties, "geoid") %>%
+  plot_pip("Dams Per County")
+
+v_pip = pip(dams, v_grid, "id") %>%
+  plot_pip("Dams Per Viroinoi Tesselation")
+t_pip = pip(dams, t_grid, "id") %>%
+  plot_pip("Dams Per Triangulated Tesselation")
+sq_pip = pip(dams, sq_grid, "id") %>%
+  plot_pip("Dams Per Square Coverage")
+hex_pip = pip(dams, hex_grid, "id") %>%
+  plot_pip("Dams Per Hexagonal Coverage")
 
 # 3.6
 
