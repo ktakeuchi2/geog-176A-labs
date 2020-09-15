@@ -1,0 +1,259 @@
+---
+title: "Geography 176A"
+author: "[Kiki Takeuchi](https://github.com/ktakeuchi2)"
+subtitle: "Lab 05: Rasters and Remote Sensing"
+output:
+  html_document:
+  theme: journal
+---
+
+*****
+
+### Question 1
+##### *Identifying the Area of Interest*
+
+Our area of interest is Palo, Iowa. We filter to this city and create a 5 km buffer. We then extract flood data to this extent.
+
+```{r, message = FALSE, warning = FALSE, echo=FALSE}
+library(raster)
+library(tidyverse)
+library(getlandsat)
+library(sf)
+library(mapview)
+library(osmdata)
+```
+
+```{r, message = FALSE, warning = FALSE, echo=FALSE}
+bb = read_csv("../data/uscities.csv") %>%
+  filter(city == "Palo") %>%
+  st_as_sf(coords = c("lng", "lat"), crs = 4326) %>%
+  st_transform(5070) %>%
+  st_buffer(5000) %>%
+  st_bbox() %>%
+  st_as_sfc() %>%
+  st_as_sf()
+
+bbwgs = bb %>%
+  st_transform(4326)
+```
+
+### Question 2
+##### *Identifying, Downloading, and Caching Images*
+
+```{r, message = FALSE, warning = FALSE, echo=FALSE}
+meta = read_csv("../data/palo-flood.csv")
+
+files = lsat_scene_files(meta$download_url) %>% 
+  filter(grepl(paste0("B", 1:6, ".TIF$", collapse = "|"), file)) %>% 
+  arrange(file) %>% 
+  pull(file)
+
+st = sapply(files, lsat_image)
+
+b = stack(st) %>% 
+  setNames(c(paste0("band", 1:6)))
+cropper = bbwgs %>% 
+  st_transform(crs(b))
+r = crop(b, cropper)
+```
+
+##### Dimensions, Coordinate Reference System, and Resolution of stacked images
+
+Dimensions of the stacked image
+```{r, message = FALSE, warning = FALSE, echo=FALSE}
+dim(b)
+```
+
+Coordinate System of the stacked image
+```{r, message = FALSE, warning = FALSE, echo=FALSE}
+crs(b)
+```
+
+Resolution of the stacked image
+```{r, message = FALSE, warning = FALSE, echo=FALSE}
+res(b)
+```
+
+Dimensions of the cropped image stack
+```{r, message = FALSE, warning = FALSE, echo=FALSE}
+dim(r)
+```
+
+Coordinate System of the cropped image stack
+```{r, message = FALSE, warning = FALSE, echo=FALSE}
+crs(r)
+```
+
+Resolution of the cropped image stack
+```{r, message = FALSE, warning = FALSE, echo=FALSE}
+res(r)
+```
+
+
+### Question 3
+##### *Making RGB plots of these images*
+
+##### R-G-B (natural color), NIR-R-G (fa), NIR-SWIR-R (false color water focus), and NIR-SWIR2-Coastal aerosol (false color for vegetation and water)
+
+```{r, message = FALSE, warning = FALSE, echo=FALSE}
+par(mfrow = c(2, 2))
+plotRGB(r, r = 4, g = 3, b = 2)
+plotRGB(r, r = 5, g = 4, b = 3)
+plotRGB(r, r = 6, g = 5, b = 4)
+plotRGB(r, r = 5, g = 7, b = 1)
+```
+
+##### Applying stretch = "lin"
+
+```{r, message = FALSE, warning = FALSE, echo=FALSE}
+par(mfrow = c(2, 2))
+plotRGB(r, r = 4, g = 3, b = 2, stretch = "lin")
+plotRGB(r, r = 5, g = 4, b = 3, stretch = "lin")
+plotRGB(r, r = 6, g = 5, b = 4, stretch = "lin")
+plotRGB(r, r = 5, g = 7, b = 1, stretch = "lin")
+```
+
+##### Applying stretch = "hist"
+
+```{r, message = FALSE, warning = FALSE, echo=FALSE}
+par(mfrow = c(2, 2))
+plotRGB(r, r = 4, g = 3, b = 2, stretch = "hist")
+plotRGB(r, r = 5, g = 4, b = 3, stretch = "hist")
+plotRGB(r, r = 6, g = 5, b = 4, stretch = "hist")
+plotRGB(r, r = 5, g = 7, b = 1, stretch = "hist")
+```
+
+Applying a color stretch helps make differences in landscapes more visibly clear to assist in identifying patterns or features.
+
+
+### Question 4
+##### *Assessments of Surface Water Features Using A Threshold Value*
+
+##### Raster Algebra for 5 Formulas Assessing Surface Water Features 
+```{r, message = FALSE, warning = FALSE, echo = FALSE}
+ndvi = (r$band5 - r$band4) / (r$band5 + r$band4)
+ndwi = (r$band3 - r$band5) / (r$band3 + r$band5)
+mndwi = (r$band3 - r$band6) / (r$band3 + r$band6)
+wri = (r$band3 + r$band4) / (r$band5 + r$band6)
+swi = 1 / sqrt(r$band2 - r$band6)
+
+sw_rasters = stack(ndvi, ndwi, mndwi, wri, swi) %>% 
+  setNames(c("ndvi", "ndwi", "mndwi", "wri", "swi"))
+
+palette = colorRampPalette(c("blue", "white", "red"))
+plot(sw_rasters, col = palette(256))
+```
+
+The images are created by applying 5 different formulas for identifying surface water features utilizing the Landsat bands. They are similar in that they highlight the river region as well as other surface water areas. They also all use the the same blue, white, and red color scheme that we created in our palette. They differ in that the surface water areas are not all highlighted in the same color, and some images direct more attention towards the landscape rather than water regions. The final plot, the simple water index, highlights only the surface water captured in the image.
+
+
+##### Raster Thresholding
+
+By applying five different raster thresholds assessing surface water features, we are apply to plot flooding areas in blue. 
+
+```{r, message = FALSE, warning = FALSE, echo = FALSE}
+thresh_ndvi = function(x){ifelse(x <= 0, 1, 0)}
+thresh_ndwi = function(x){ifelse(x >= 0, 1, 0)}
+thresh_wri = function(x){ifelse(x >= 1, 1, 0)}
+thresh_swi = function(x){ifelse(x <= 5, 1, 0)}
+thresh_flood = function(x){ifeslse(is.na(x), 0, 1)}
+
+flood_ndvi = calc(ndvi, thresh_ndvi)
+flood_ndwi = calc(ndwi, thresh_ndwi)
+flood_mndwi = calc(mndwi, thresh_ndwi)
+flood_wri = calc(wri, thresh_wri)
+flood_swi = calc(swi, thresh_swi)
+
+flood = stack(flood_ndvi, flood_ndwi, flood_mndwi, flood_wri, flood_swi) %>% 
+  setNames(c("ndvi", "ndwi", "mndwi", "wri", "swi"))
+
+plot(flood, colNA = "white", col = c("white", "blue"))
+```
+
+### Question 5
+##### *Supervised and Unsupervised Classification Using K-Means*
+
+In this method of creating a flood raster, we calculated the cluster of most flooded cells in our kmeans data to create a flood mask. 
+
+Dimensions of values from 6-band raster set:
+
+```{r, message = FALSE, warning = FALSE, echo = FALSE}
+set.seed(09072020)
+
+values = getValues(r)
+dim(r)
+
+idx = which(!is.na(values))
+v = na.omit(values)
+vs = scale(v)
+
+library(stats)
+
+k12 = kmeans(vs, centers = 12)
+kmeans_raster = flood$ndvi
+values(kmeans_raster) = k12$cluster
+plot(kmeans_raster, main = "k12")
+
+k11 = kmeans(vs, centers = 11)
+kmeans_raster = flood$ndvi
+values(kmeans_raster) = k11$cluster
+plot(kmeans_raster, main = "k11")
+
+k10 = kmeans(vs, centers = 10)
+kmeans_raster = flood$ndvi
+values(kmeans_raster) = k10$cluster
+plot(kmeans_raster, main = "k10")
+
+k13 = kmeans(vs, centers = 13)
+kmeans_raster = flood$ndvi
+values(kmeans_raster) = k13$cluster
+plot(kmeans_raster, main = "k13")
+
+k9 = kmeans(vs, centers = 9)
+kmeans_raster = flood$ndvi
+values(kmeans_raster) = k9$cluster
+plot(kmeans_raster, main = "k9")
+```
+
+##### Plotting Flooding Values From All 6 Bands of Flood Raster
+
+```{r, message = FALSE, warning = FALSE, echo = FALSE}
+flood_values = values(flood_ndvi)
+kmeans_values = values(kmeans_raster)
+table = table(flood_values, kmeans_values)
+
+idx = which.max(table)
+mask = function(x){ifelse(x == idx, 1, 0)}
+kmeans = calc(kmeans_raster, mask)
+
+flood = addLayer(flood, kmeans) 
+plot(flood, colNA = "white", col = c("white", "blue"))
+```
+
+### Question 6
+##### *Comparing the Different Methods of Creating a Flood Raster*
+
+```{r, message = FALSE, warning = FALSE, echo = FALSE}
+cell_area = cellStats(flood, sum)
+cell_area = cell_area * 30^2
+
+knitr::kable(cell_area, 
+             caption = "Total Area of Flooded Cells") %>% 
+  kableExtra::kable_styling("striped", full_width = TRUE)
+
+total_flood = calc(flood, fun = sum)
+```
+
+##### Plotting the Flood Map
+```{r, message = FALSE, warning = FALSE, echo=FALSE}
+plot(total_flood, col = RColorBrewer::brewer.pal(9, "Blues"))
+```
+
+##### Interactive Flood Map Using Leaflet
+
+```{r, message = FALSE, warning = FALSE, echo=FALSE}
+mapview(total_flood)
+```
+
+*****
+

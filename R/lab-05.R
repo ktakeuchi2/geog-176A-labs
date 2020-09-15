@@ -25,7 +25,7 @@ bb = read_csv("data/uscities.csv") %>%
 # 5070 is equal area projection
 # st_as_sfc is a simple features collection
 # st_as_sf makes into a simple features object
-mapview(bb)
+
 
 # detour
 bbwgs = bb %>%
@@ -122,9 +122,10 @@ flood <- na.omit(flood)
 
 ### Question 5
 set.seed(09072020)
+
+values = getValues(r)
 dim(r)
 
-values = values(r)
 idx = which(!is.na(values))
 v = na.omit(values)
 vs = scale(v)
@@ -156,37 +157,28 @@ kmeans_raster = flood$ndvi
 values(kmeans_raster) = k9$cluster
 plot(kmeans_raster)
 
-flood_values = getValues(flood_ndvi)
-kmeans_values = getValues(kmeans_raster)
+flood_values = values(flood_ndvi)
+kmeans_values = values(kmeans_raster)
 table = table(flood_values, kmeans_values)
-which.max(table)
 
-mask = function(x){ifelse(x == 5, 1, NA)}
-flood_mask = calc(kmeans_raster, mask)
+idx = which.max(table)
+mask = function(x){ifelse(x == idx, 1, 0)}
+kmeans = calc(kmeans_raster, mask)
 
-flood = addLayer(flood, flood_mask)
+flood = addLayer(flood, kmeans)
+plot(flood, colNA = "white", col = c("white", "blue"))
 
 ### Question 6
 
-s1 = cellStats(flood$ndvi, stat = 'sum') * 30^2
-s2 = cellStats(flood$ndwi, stat = 'sum') * 30^2
-s3 = cellStats(flood$mndwi, stat = 'sum') * 30^2
-s4 = cellStats(flood$swi, stat = 'sum') * 30^2
-s5 = cellStats(flood$wri, stat = 'sum') * 30^2
-s6 = cellStats(flood_mask, stat = 'sum') * 30^2
-comparison = cbind(method = c("ndvi", "ndwi", "mndwi", "wri", "swi", "kmeans_mask"), cell_area = c(s1, s2, s3, s4, s5, s6))
+cell_area = cellStats(flood, sum)
+cell_area = cell_area * 30^2
 
-
-knitr::kable(comparison,
-             caption = "Total Area of Flooded Cells",
-             col.names = c("Band", "Total Flooded Cells")) %>%
+knitr::kable(cell_area,
+             caption = "Total Area of Flooded Cells") %>%
   kableExtra::kable_styling("striped", full_width = TRUE)
 
-total_flood = calc(flood, sum)
+total_flood = calc(flood, fun = sum)
 plot(total_flood, col = RColorBrewer::brewer.pal(9, "Blues"))
-
-total_flood <- na.omit(total_flood)
-flood = addLayer(flood, total_flood)
 
 mapview(total_flood)
 

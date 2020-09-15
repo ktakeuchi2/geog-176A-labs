@@ -115,7 +115,7 @@ plot(hillshade, box = FALSE, axes = FALSE, col = gray.colors(256, alpha = .5), m
 plot(basin, add = TRUE)
 plot(offset_hand, col = rev(blues9), add = TRUE)
 plot(bldg_cent, col = buildings, pch = 16, cex = .08, add = TRUE)
-plot(railway, col = "green", cex = 1, pch = 16, add = TRUE)
+plot(railway, col = "green", cex = 1, pch = 16, add = TRUE) 
 ```
 
 ### Flood Inundation Map Library
